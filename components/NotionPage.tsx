@@ -15,7 +15,7 @@ import { Tweet, TwitterContextProvider } from 'react-static-tweets'
 import { NotionRenderer } from 'react-notion-x'
 
 // utils
-import { getBlockTitle } from 'notion-utils'
+import { getBlockTitle, parsePageId } from 'notion-utils'
 import { mapPageUrl, getCanonicalPageUrl } from 'lib/map-page-url'
 import { mapImageUrl } from 'lib/map-image-url'
 import { getPageDescription } from 'lib/get-page-description'
@@ -33,6 +33,7 @@ import { PageActions } from './PageActions'
 import { Footer } from './Footer'
 import { PageSocial } from './PageSocial'
 import { GitHubShareButton } from './GitHubShareButton'
+import { HeroHeader } from './HeroHeader'
 
 import styles from './styles.module.css'
 
@@ -116,10 +117,13 @@ export const NotionPage: React.FC<types.PageProps> = ({
   const canonicalPageUrl =
     !config.isDev && getCanonicalPageUrl(site, recordMap)(pageId)
 
-  // const isRootPage =
-  //   parsePageId(block.id) === parsePageId(site.rootNotionPageId)
+  const isRootPage =
+    parsePageId(block.id) === parsePageId(site.rootNotionPageId)
   const isBlogPost =
     block.type === 'page' && block.parent_table === 'collection'
+  const isBioPage =
+    parsePageId(block.id) === parsePageId('8d0062776d0c4afca96eb1ace93a7538')
+
   const showTableOfContents = !!isBlogPost
   const minTableOfContentsItems = 3
 
@@ -132,6 +136,7 @@ export const NotionPage: React.FC<types.PageProps> = ({
     getPageDescription(block, recordMap) ?? config.description
 
   let pageAside: React.ReactNode = null
+  let pageCover: React.ReactNode = null
 
   // only display comments and page actions on blog post pages
   if (isBlogPost) {
@@ -141,6 +146,12 @@ export const NotionPage: React.FC<types.PageProps> = ({
     }
   } else {
     pageAside = <PageSocial />
+  }
+
+  if (isRootPage || isBioPage) {
+    pageCover = (
+      <HeroHeader className='notion-page-cover-wrapper notion-page-cover-hero' />
+    )
   }
 
   return (
@@ -192,6 +203,7 @@ export const NotionPage: React.FC<types.PageProps> = ({
         defaultPageIcon={config.defaultPageIcon}
         defaultPageCover={config.defaultPageCover}
         defaultPageCoverPosition={config.defaultPageCoverPosition}
+        linkTableTitleProperties={false}
         mapPageUrl={siteMapPageUrl}
         mapImageUrl={mapImageUrl}
         searchNotion={searchNotion}
@@ -202,6 +214,7 @@ export const NotionPage: React.FC<types.PageProps> = ({
             toggleDarkMode={darkMode.toggle}
           />
         }
+        pageCover={pageCover}
       />
 
       <GitHubShareButton />
