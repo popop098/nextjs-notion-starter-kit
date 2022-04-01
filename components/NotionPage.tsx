@@ -15,7 +15,7 @@ import { Tweet, TwitterContextProvider } from 'react-static-tweets'
 import { NotionRenderer } from 'react-notion-x'
 
 // utils
-import { getBlockTitle, parsePageId } from 'notion-utils'
+import { getBlockTitle, parsePageId, normalizeTitle } from 'notion-utils'
 import { mapPageUrl, getCanonicalPageUrl } from 'lib/map-page-url'
 import { mapImageUrl } from 'lib/map-image-url'
 import { getPageDescription } from 'lib/get-page-description'
@@ -65,11 +65,30 @@ const Modal = dynamic(
   }
 )
 
+const propertySelectValue = (
+  { schema, value, key, pageHeader },
+  defaultFn: () => React.ReactNode
+) => {
+  value = normalizeTitle(value)
+
+  if (pageHeader && schema.type === 'multi_select' && value) {
+    return (
+      <Link href={`/tags/${value}`} key={key}>
+        <a>{defaultFn()}</a>
+      </Link>
+    )
+  }
+
+  return defaultFn()
+}
+
 export const NotionPage: React.FC<types.PageProps> = ({
   site,
   recordMap,
   error,
-  pageId
+  pageId,
+  tagsPage,
+  propertyToFilterName
 }) => {
   const router = useRouter()
   const lite = useSearchParam('lite')
@@ -94,7 +113,9 @@ export const NotionPage: React.FC<types.PageProps> = ({
     return <Page404 site={site} pageId={pageId} error={error} />
   }
 
-  const title = getBlockTitle(block, recordMap) || site.name
+  const name = getBlockTitle(block, recordMap) || site.name
+  const title =
+    tagsPage && propertyToFilterName ? `${propertyToFilterName} ${name}` : name
 
   console.log('notion page', {
     isDev: config.isDev,
@@ -179,7 +200,8 @@ export const NotionPage: React.FC<types.PageProps> = ({
       <NotionRenderer
         bodyClassName={cs(
           styles.notion,
-          pageId === site.rootNotionPageId && 'index-page'
+          pageId === site.rootNotionPageId && 'index-page',
+          tagsPage && 'tags-page'
         )}
         components={{
           nextImage: Image,
@@ -189,7 +211,8 @@ export const NotionPage: React.FC<types.PageProps> = ({
           Equation,
           Pdf,
           Modal,
-          Tweet
+          Tweet,
+          propertySelectValue
         }}
         recordMap={recordMap}
         rootPageId={site.rootNotionPageId}
@@ -208,6 +231,7 @@ export const NotionPage: React.FC<types.PageProps> = ({
         mapImageUrl={mapImageUrl}
         searchNotion={searchNotion}
         pageAside={pageAside}
+        pageTitle={tagsPage && propertyToFilterName ? title : undefined}
         footer={
           <Footer
             isDarkMode={darkMode.value}
